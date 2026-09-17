@@ -9,4 +9,3 @@ BOOL QDInstallElementHook(Class elementClass, Class faceClass);
 NSUInteger QDWithResult(NSUInteger result, void (NS_NOESCAPE ^send)(void));
 
 NS_ASSUME_NONNULL_END
-

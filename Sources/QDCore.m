@@ -83,4 +83,3 @@ NSUInteger QDWithResult(NSUInteger result, void (NS_NOESCAPE ^send)(void)) {
     }
     return scope.changed;
 }
-

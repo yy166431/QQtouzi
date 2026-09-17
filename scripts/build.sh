@@ -18,9 +18,8 @@ xcrun --sdk iphoneos clang -isysroot "$IOS_SDK" -target arm64-apple-ios15.0 \
   Sources/QDCore.m Sources/QQDice.m -o build/QQtouzi.dylib
 codesign --force --sign - --timestamp=none build/QQtouzi.dylib
 codesign --verify --strict build/QQtouzi.dylib
-xcrun lipo -verify_arch arm64 build/QQtouzi.dylib
+xcrun lipo build/QQtouzi.dylib -verify_arch arm64
 file build/QQtouzi.dylib
 xcrun otool -L build/QQtouzi.dylib
 shasum -a 256 build/QQtouzi.dylib > build/SHA256SUMS.txt
 cp README.md build/README.md
-

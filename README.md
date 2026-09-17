@@ -49,4 +49,3 @@ On a Mac with Xcode installed, run `bash scripts/build.sh`.
 
 The IPA and extracted QQ binaries are not part of this repository.
 See [analysis notes](docs/analysis.md) for the evidence and limitations.
-
