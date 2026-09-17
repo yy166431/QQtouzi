@@ -58,7 +58,7 @@ int main(void) {
             NSCAssert(changed == 1, @"Exactly one outgoing dice patched");
             NSCAssert(sent.resultId.integerValue == (NSInteger)result, @"Selected result survives return");
             NSCAssert([sent.randomType isEqual:@1], @"Interactive result type");
-            NSCAssert([sent.stickerType isEqual:@0], @"Do not ask server to replace selected result");
+            NSCAssert([sent.stickerType isEqual:@2], @"Preserve native dice for preview and forwarding");
             MockFace *incoming = Attach(358);
             NSCAssert(incoming.resultId == nil && [incoming.stickerType isEqual:@2], @"Unscoped incoming message unchanged");
         }

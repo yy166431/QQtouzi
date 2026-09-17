@@ -1,5 +1,6 @@
 #import <UIKit/UIKit.h>
 #import "QDCore.h"
+#import "QDWire.h"
 
 static void (*originalSend)(id, SEL, unsigned int, id);
 static void (*originalInteractiveSend)(id, SEL, id, unsigned int);
@@ -112,13 +113,15 @@ static void QDInstall(NSUInteger attempt) {
     Class interactive = NSClassFromString(@"FaceRichBoard.NTAIOFaceRichBoardViewModel");
     Class element = NSClassFromString(@"OCMsgElement");
     Class face = NSClassFromString(@"OCFaceElement");
-    if (element && face && QDInstallElementHook(element, face)) {
+    Class request = NSClassFromString(@"MSFReqModel");
+    Class reader = NSClassFromString(@"GPBCodedInputStream");
+    if (element && face && QDInstallWireHook(request, reader) && QDInstallElementHook(element, face)) {
         SEL selector = NSSelectorFromString(@"onSendLottieEmojiWithContact:emojiId:");
         if (!originalInteractiveSend &&
             QDMethodMatches(interactive, selector, "v", @[@"@", @"I"])) {
             originalInteractiveSend = (void (*)(id, SEL, id, unsigned int))
                 QDReplace(interactive, selector, (IMP)QDInteractiveSend);
-            NSLog(@"[QQtouzi] 0.3.0 interactive dice hook installed");
+            NSLog(@"[QQtouzi] 0.4.0 interactive dice hook installed");
         }
         selector = NSSelectorFromString(@"sendSuperEmojiWithSid:context:");
         if (!originalSend && QDMethodMatches(sender, selector, "v", @[@"I", @"@"])) {
