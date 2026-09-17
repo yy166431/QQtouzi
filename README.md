@@ -29,8 +29,10 @@ handle the target application's loading/signing requirements.
   choice made by 0.2.0. Changing `randomType` alone did not fix this.
 - A temporary device experiment with type 0 sent `resultId="6"` on the wire;
   the server acknowledged success without a replacement dice result. The user
-  confirmed that both sender and recipient displayed 6. The remaining values
-  and the compiled 0.3.0 dylib still need acceptance testing.
+  confirmed that both sender and recipient displayed 6. Further scoped tests
+  sent 1 through 5 successfully without replacement results, and the user
+  reported correct behavior. These checks used a temporary runtime patch;
+  reinject the compiled 0.3.0 dylib to retain the fix after restarting QQ.
 - Version 0.2.0 adds the modern interactive panel's send entry point, identified
   by tracing a real dice tap. Version 0.1.0 only hooked a legacy send path that
   the tested interactive panel bypasses.

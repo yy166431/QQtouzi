@@ -39,8 +39,12 @@ common element (service 37) with pack "1", sticker "33", face 358, source 1,
 stickerType 0, resultId "6", and randomType 1. The server acknowledged success
 without field 13, so no replacement dice result was supplied. No incoming data
 or rendering methods were modified. The user confirmed both sender and
-recipient displayed 6. This scoped experiment does not yet validate every
-value, every client, or the compiled 0.3.0 artifact.
+recipient displayed 6. Further scoped tests sent 1 through 5: every outgoing
+result matched the selection, every response acknowledged success, and none
+contained field 13. The user reported correct behavior. All six values were
+thus covered across these temporary runtime tests. The compiled 0.3.0 dylib
+passed CI but still needs reinjection; the temporary patch ends on debugger
+detach and does not modify the installed dylib.
 
 Version 0.3.0 applies this additional assignment only to the same outgoing face
 already selected by the scoped hook. It verifies the setter ABI before installing.
