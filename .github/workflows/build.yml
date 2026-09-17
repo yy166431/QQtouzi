@@ -1,0 +1,29 @@
+name: Build iOS dylib
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test and build
+        run: bash scripts/build.sh
+      - name: Upload dylib
+        uses: actions/upload-artifact@v4
+        with:
+          name: QQtouzi-arm64
+          path: |
+            build/QQtouzi.dylib
+            build/SHA256SUMS.txt
+            build/README.md
+          if-no-files-found: error
+          retention-days: 30
+
