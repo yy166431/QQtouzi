@@ -6,6 +6,7 @@
 - (unsigned int)faceIndex;
 - (void)setResultId:(NSString *)value;
 - (void)setRandomType:(NSNumber *)value;
+- (void)setStickerType:(NSNumber *)value;
 @end
 
 typedef struct QDSendScope {
@@ -44,6 +45,8 @@ static void QDSetFace(id self, SEL selector, id face) {
         [(id<QDFace>)face setResultId:[NSString stringWithFormat:@"%lu",
                                       (unsigned long)scope->result]];
         [(id<QDFace>)face setRandomType:@1];
+        // Type 2 asks the server to roll again and replace resultId in its reply.
+        [(id<QDFace>)face setStickerType:@0];
         scope->changed++;
     }
     originalSetFace(self, selector, face);
@@ -57,7 +60,8 @@ BOOL QDInstallElementHook(Class elementClass, Class faceClass) {
     if (!QDMethodMatches(elementClass, setter, "v", @[@"@"]) ||
         !QDMethodMatches(faceClass, NSSelectorFromString(@"faceIndex"), "I", @[]) ||
         !QDMethodMatches(faceClass, NSSelectorFromString(@"setResultId:"), "v", @[@"@"]) ||
-        !QDMethodMatches(faceClass, NSSelectorFromString(@"setRandomType:"), "v", @[@"@"])) {
+        !QDMethodMatches(faceClass, NSSelectorFromString(@"setRandomType:"), "v", @[@"@"]) ||
+        !QDMethodMatches(faceClass, NSSelectorFromString(@"setStickerType:"), "v", @[@"@"])) {
         return NO;
     }
     Method method = class_getInstanceMethod(elementClass, setter);

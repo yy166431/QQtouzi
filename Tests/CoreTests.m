@@ -5,6 +5,7 @@
 @property(nonatomic) unsigned int faceIndex;
 @property(nonatomic, copy) NSString *resultId;
 @property(nonatomic, strong) NSNumber *randomType;
+@property(nonatomic, strong) NSNumber *stickerType;
 @end
 @implementation MockFace
 @end
@@ -30,6 +31,7 @@
 static MockFace *Face(unsigned int sid) {
     MockFace *face = [MockFace new];
     face.faceIndex = sid;
+    face.stickerType = @2;
     return face;
 }
 
@@ -47,14 +49,18 @@ int main(void) {
         for (NSUInteger result = 1; result <= 6; result++) {
             __block MockFace *sent;
             NSUInteger changed = QDWithResult(result, ^{
-                NSCAssert(Attach(359).resultId == nil, @"Other emoji unchanged");
+                MockFace *other = Attach(359);
+                NSCAssert(other.resultId == nil && [other.stickerType isEqual:@2], @"Other emoji unchanged");
                 sent = Attach(358);
-                NSCAssert(Attach(358).resultId == nil, @"Only one element per choice");
+                MockFace *second = Attach(358);
+                NSCAssert(second.resultId == nil && [second.stickerType isEqual:@2], @"Only one element per choice");
             });
             NSCAssert(changed == 1, @"Exactly one outgoing dice patched");
             NSCAssert(sent.resultId.integerValue == (NSInteger)result, @"Selected result survives return");
             NSCAssert([sent.randomType isEqual:@1], @"Interactive result type");
-            NSCAssert(Attach(358).resultId == nil, @"Unscoped incoming message unchanged");
+            NSCAssert([sent.stickerType isEqual:@0], @"Do not ask server to replace selected result");
+            MockFace *incoming = Attach(358);
+            NSCAssert(incoming.resultId == nil && [incoming.stickerType isEqual:@2], @"Unscoped incoming message unchanged");
         }
         __block BOOL called = NO;
         NSCAssert(QDWithResult(0, ^{ called = YES; }) == 0, @"Reject zero");

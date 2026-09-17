@@ -20,7 +20,32 @@ through `0x104422f44`, the builder at `0x108f1fd08`, and the same face factory a
 
 Version 0.2.0 intercepts this entry point before construction, retaining the
 contact and sender in the picker callback. The legacy hook remains available.
-The picker and final transmitted result still require validation of this build.
+Device testing confirmed the picker and initial result assignment work. The
+server subsequently overwrote those results, as described below.
+
+## Server result replacement (0.3.0)
+
+Tracing `MSFReqModel.data` and `MSFRspModel.recvData` for `MessageSvc.PbSendMsg`
+identified the overwrite. These buffers have a four-byte big-endian length
+prefix, including the prefix itself, before the protobuf message.
+
+With the default stickerType 2, selecting 6 produced a successful response whose
+field 13 contained dice 358 and resultId "3". QQ then updated the message to 3,
+matching the user-visible result. Earlier tests produced 2 and 1; changing only
+randomType from 1 to 0 still produced 4.
+
+A scoped experiment setting stickerType to 0 produced an outgoing rich-text
+common element (service 37) with pack "1", sticker "33", face 358, source 1,
+stickerType 0, resultId "6", and randomType 1. The server acknowledged success
+without field 13, so no replacement dice result was supplied. No incoming data
+or rendering methods were modified. The user confirmed both sender and
+recipient displayed 6. This scoped experiment does not yet validate every
+value, every client, or the compiled 0.3.0 artifact.
+
+Version 0.3.0 applies this additional assignment only to the same outgoing face
+already selected by the scoped hook. It verifies the setter ABI before installing.
+Tests cover all six choices and preserve type 2 on unrelated, additional, and
+unscoped faces.
 
 ## Legacy send path
 
@@ -47,9 +72,11 @@ invocation returns, including exceptional exits.
 - `-[OCFaceElement faceIndex]`: `I16@0:8`, unsigned int.
 - `-[OCFaceElement setResultId:]`: `v24@0:8@16`, object (NSString).
 - `-[OCFaceElement setRandomType:]`: `v24@0:8@16`, object (NSNumber).
+- `-[OCFaceElement setStickerType:]`: `v24@0:8@16`, object (NSNumber).
 - `-[OCMsgElement setFaceElement:]`: `v24@0:8@16`.
 
-The candidate wire values are result strings `1` through `6` and randomType 1.
+The outgoing values are result strings `1` through `6`, randomType 1, and
+stickerType 0. The latter avoids the observed server replacement with type 2.
 QQ's own `AniStickerAtomMsgData.convertToMsgRecord` implementation also copies
 the result string into `OCFaceElement.resultId` (call at `0x1027cc17c`).
 Public protocol code corroborates a string result and randomType 1 for large

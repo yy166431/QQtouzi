@@ -118,7 +118,7 @@ static void QDInstall(NSUInteger attempt) {
             QDMethodMatches(interactive, selector, "v", @[@"@", @"I"])) {
             originalInteractiveSend = (void (*)(id, SEL, id, unsigned int))
                 QDReplace(interactive, selector, (IMP)QDInteractiveSend);
-            NSLog(@"[QQtouzi] 0.2.0 interactive dice hook installed");
+            NSLog(@"[QQtouzi] 0.3.0 interactive dice hook installed");
         }
         selector = NSSelectorFromString(@"sendSuperEmojiWithSid:context:");
         if (!originalSend && QDMethodMatches(sender, selector, "v", @[@"I", @"@"])) {
