@@ -23,6 +23,9 @@ handle the target application's loading/signing requirements.
 
 ## Verification status
 
+- Version 0.2.0 adds the modern interactive panel's send entry point, identified
+  by tracing a real dice tap. Version 0.1.0 only hooked a legacy send path that
+  the tested interactive panel bypasses.
 - The send method, dice ID, element construction, and Objective-C signatures
   were identified in the supplied decrypted QQ 9.3.65.605 executable.
 - GitHub Actions runs macOS tests of outgoing result assignment, non-dice and
@@ -37,7 +40,13 @@ private and group chats, cancellation, consecutive sends, and incoming dice.
 Reopen chat history to check that the result persists. Do not infer success
 solely from the sender's animation.
 
-Console messages have the prefix `[QQtouzi]`. A chosen send should log
+If no picker appears, first verify that `QQtouzi.dylib` is in QQ's **loaded
+modules**, not just its Frameworks folder. The injector must add a dylib load
+command or provide a working loader, and QQ must be fully restarted. This was
+a separate cause of the missing picker on the test device.
+
+Console messages have the prefix `[QQtouzi]`. Startup should log
+`0.2.0 interactive dice hook installed`. A chosen send should log
 `Requested=N patchedElements=1`. Zero patched elements means the live send path
 differs from the analyzed executable; that send may retain QQ's normal random
 behavior. Different QQ builds are disabled by the version guard.

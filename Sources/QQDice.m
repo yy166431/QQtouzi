@@ -2,6 +2,7 @@
 #import "QDCore.h"
 
 static void (*originalSend)(id, SEL, unsigned int, id);
+static void (*originalInteractiveSend)(id, SEL, id, unsigned int);
 static __weak UIAlertController *activePicker;
 
 static UIViewController *QDPresenter(void) {
@@ -32,7 +33,7 @@ static UIViewController *QDPresenter(void) {
     return nil;
 }
 
-static void QDChooseResult(id sender, SEL selector, unsigned int sid, id context) {
+static void QDChooseResult(void (^send)(void)) {
     NSCAssert(NSThread.isMainThread, @"Picker must run on main thread");
     if (activePicker && !activePicker.isBeingDismissed) {
         return;
@@ -52,9 +53,7 @@ static void QDChooseResult(id sender, SEL selector, unsigned int sid, id context
         [alert addAction:[UIAlertAction actionWithTitle:title style:UIAlertActionStyleDefault
             handler:^(__unused UIAlertAction *action) {
                 activePicker = nil;
-                NSUInteger changed = QDWithResult(result, ^{
-                    originalSend(sender, selector, sid, context);
-                });
+                NSUInteger changed = QDWithResult(result, send);
                 NSLog(@"[QQtouzi] Requested=%lu patchedElements=%lu",
                       (unsigned long)result, (unsigned long)changed);
                 if (changed != 1) {
@@ -66,8 +65,18 @@ static void QDChooseResult(id sender, SEL selector, unsigned int sid, id context
         style:UIAlertActionStyleCancel handler:^(__unused UIAlertAction *action) {
             activePicker = nil;
         }]];
-    // Blocks retain the original sender and chat context until choice/cancel.
+    // The send block retains the original sender and contact until choice/cancel.
     [presenter presentViewController:alert animated:YES completion:nil];
+}
+
+static void QDQueuePicker(void (^send)(void)) {
+    if (NSThread.isMainThread) {
+        QDChooseResult(send);
+    } else {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            QDChooseResult(send);
+        });
+    }
 }
 
 static void QDSend(id self, SEL selector, unsigned int sid, id context) {
@@ -75,45 +84,58 @@ static void QDSend(id self, SEL selector, unsigned int sid, id context) {
         originalSend(self, selector, sid, context);
         return;
     }
-    if (NSThread.isMainThread) {
-        QDChooseResult(self, selector, sid, context);
-    } else {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            QDChooseResult(self, selector, sid, context);
-        });
+    QDQueuePicker(^{ originalSend(self, selector, sid, context); });
+}
+
+static void QDInteractiveSend(id self, SEL selector, id contact, unsigned int sid) {
+    if (sid != 358 || !contact) {
+        originalInteractiveSend(self, selector, contact, sid);
+        return;
     }
+    QDQueuePicker(^{ originalInteractiveSend(self, selector, contact, sid); });
+}
+
+static IMP QDReplace(Class cls, SEL selector, IMP replacement) {
+    Method method = class_getInstanceMethod(cls, selector);
+    IMP original = method_getImplementation(method);
+    if (!class_addMethod(cls, selector, replacement, method_getTypeEncoding(method))) {
+        method_setImplementation(method, replacement);
+    }
+    return original;
 }
 
 static void QDInstall(NSUInteger attempt) {
-    static BOOL installed;
-    if (installed) {
+    if (originalSend && originalInteractiveSend) {
         return;
     }
     Class sender = NSClassFromString(@"NTFaceSendHandler");
+    Class interactive = NSClassFromString(@"FaceRichBoard.NTAIOFaceRichBoardViewModel");
     Class element = NSClassFromString(@"OCMsgElement");
     Class face = NSClassFromString(@"OCFaceElement");
-    if (!sender || !element || !face) {
+    if (element && face && QDInstallElementHook(element, face)) {
+        SEL selector = NSSelectorFromString(@"onSendLottieEmojiWithContact:emojiId:");
+        if (!originalInteractiveSend &&
+            QDMethodMatches(interactive, selector, "v", @[@"@", @"I"])) {
+            originalInteractiveSend = (void (*)(id, SEL, id, unsigned int))
+                QDReplace(interactive, selector, (IMP)QDInteractiveSend);
+            NSLog(@"[QQtouzi] 0.2.0 interactive dice hook installed");
+        }
+        selector = NSSelectorFromString(@"sendSuperEmojiWithSid:context:");
+        if (!originalSend && QDMethodMatches(sender, selector, "v", @[@"I", @"@"])) {
+            originalSend = (void (*)(id, SEL, unsigned int, id))
+                QDReplace(sender, selector, (IMP)QDSend);
+            NSLog(@"[QQtouzi] Legacy super-emoji hook installed");
+        }
+    }
+    if (!originalSend || !originalInteractiveSend) {
         if (attempt < 30) {
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC),
                 dispatch_get_main_queue(), ^{ QDInstall(attempt + 1); });
         } else {
-            NSLog(@"[QQtouzi] Required QQ classes missing; hooks disabled");
+            NSLog(@"[QQtouzi] Missing/incompatible send hooks: interactive=%d legacy=%d",
+                  originalInteractiveSend != NULL, originalSend != NULL);
         }
-        return;
     }
-    SEL selector = NSSelectorFromString(@"sendSuperEmojiWithSid:context:");
-    if (!QDMethodMatches(sender, selector, "v", @[@"I", @"@"]) ||
-        !QDInstallElementHook(element, face)) {
-        NSLog(@"[QQtouzi] Method signature mismatch; hooks disabled");
-        return;
-    }
-    Method method = class_getInstanceMethod(sender, selector);
-    originalSend = (void (*)(id, SEL, unsigned int, id))method_getImplementation(method);
-    if (!class_addMethod(sender, selector, (IMP)QDSend, method_getTypeEncoding(method))) {
-        method_setImplementation(method, (IMP)QDSend);
-    }
-    installed = YES;
-    NSLog(@"[QQtouzi] 0.1.0 loaded; QQ 9.3.65.605; ARM64");
 }
 
 __attribute__((constructor)) static void QDStart(void) {

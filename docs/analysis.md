@@ -9,7 +9,20 @@ addresses for this build only. The plugin uses selectors, never these addresses.
 The bundled `face_config.json` identifies QSid 358 as the dice, with pack ID 1,
 sticker ID 33, and AniStickerType 2. It matches the interactive-emoji screenshot.
 
-## Send path
+## Live interactive send path (0.2.0)
+
+On iOS 15.3.1 with QQ 9.3.65.605, tapping the interactive dice reaches
+`-[FaceRichBoard.NTAIOFaceRichBoardViewModel onSendLottieEmojiWithContact:emojiId:]`.
+The runtime encoding is `v28@0:8@16I24`: contact object first, unsigned emoji ID
+second. Its Objective-C wrapper is at `0x1044231c8`. The observed stack proceeds
+through `0x104422f44`, the builder at `0x108f1fd08`, and the same face factory at
+`0x110bac1d0`. This path bypasses `NTFaceSendHandler` completely.
+
+Version 0.2.0 intercepts this entry point before construction, retaining the
+contact and sender in the picker callback. The legacy hook remains available.
+The picker and final transmitted result still require validation of this build.
+
+## Legacy send path
 
 1. `-[NTFaceSendHandler sendSuperEmojiWithSid:context:]`, `0x1099653ec`,
    encoding `v28@0:8I16@20`, reads `context.chatInfo` and invokes the service's
@@ -53,3 +66,12 @@ No receive-side rendering hooks, global random hooks, raw network packets, or
 hard-coded process addresses are used. The current adapter covers the inspected
 interactive-emoji path; legacy market-face dice and other QQ builds are outside
 this adapter's scope.
+
+## Loading diagnosis
+
+On the test device, `Frameworks/QQtouzi.dylib` existed but the running QQ process
+had not loaded it. The QQ executable had no load command for this dylib. Loading
+the bundled library with the debugger succeeded and installed its hooks, proving
+that copying the file into Frameworks alone had not activated the plugin.
+An injector must add a load command (or provide another functioning loader),
+handle signing, and restart QQ. A successful file copy is insufficient.

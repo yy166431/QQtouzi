@@ -14,7 +14,7 @@ xcrun --sdk iphoneos clang -isysroot "$IOS_SDK" -target arm64-apple-ios15.0 \
   -dynamiclib -fobjc-arc -fblocks -fvisibility=hidden -O2 \
   -Wall -Wextra -Werror -I Sources -framework Foundation -framework UIKit \
   -Wl,-install_name,@rpath/QQtouzi.dylib \
-  -Wl,-compatibility_version,1.0 -Wl,-current_version,0.1.0 \
+  -Wl,-compatibility_version,1.0 -Wl,-current_version,0.2.0 \
   Sources/QDCore.m Sources/QQDice.m -o build/QQtouzi.dylib
 codesign --force --sign - --timestamp=none build/QQtouzi.dylib
 codesign --verify --strict build/QQtouzi.dylib
